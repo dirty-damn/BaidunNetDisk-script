@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百度网盘文件库目录导出
-// @namespace    https://github.com/Avens666/BaidunNetDisk-script
-// @version      1.0.1
+// @namespace    https://github.com/liong911/BaidunNetDisk-script
+// @version      1.0.2
 // @description  适用于新版本百度网盘文件库目录导出的篡改猴脚本。js牛逼！
 // @author       liong
 // @license      MIT
