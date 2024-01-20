@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         百度网盘文件库目录导出
 // @namespace    https://github.com/liong911/BaidunNetDisk-script
-// @version      1.0.2
+// @version      1.1.0
 // @description  适用于新版本百度网盘文件库目录导出的篡改猴脚本。js牛逼！
 // @author       liong
 // @license      MIT
@@ -9,6 +9,7 @@
 // @run-at       document-start
 // @grant        unsafeWindow
 // @require      https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js
 // @require      https://code.jquery.com/jquery-3.1.1.min.js
 // ==/UserScript==
 
@@ -28,7 +29,7 @@
         tipsCount: 500,
         
         exportMode: {
-            mode: Mode.FILE,
+            mode: Mode.EXCEL,
             file: {
                 SPLITTER: ', '
             },
@@ -45,6 +46,13 @@
         },
         
         exportSelectedDir: function() {
+            // 弹出选择框，选择导出模式
+            let mode = prompt("请选择导出模式：\n1. 文件\n2. Excel", "1")
+            if (mode == null || mode.length <= 0) {
+                return
+            }
+            config.exportMode.mode = parseInt(mode)
+            
             exportInfo.init()
             exportInfo.exportEveryDir()
             exportInfo.save()
@@ -137,7 +145,7 @@
                 this.writeToFile(result)
             } 
             
-            if (config.exportMode.mode === Mode.FILE)  {
+            if (config.exportMode.mode === Mode.EXCEL)  {
                 this.writeToExcel(result)
             }
         },
@@ -145,7 +153,7 @@
             let gb = this.statistic.fileSize / 1024 / 1024 / 1024
             let mb = this.statistic.fileSize / 1024 / 1024
             let result = `总耗时：${new Date().getTime() - this.statistic.startTime.getTime()}ms\n`
-                + `共导出资源数：${this.statistic.statistic}\n`
+                + `共导出资源数：${this.statistic.fileCount}\n`
                 + `共计资源大小：${gb.toFixed(2)}GB = ${mb.toFixed(2)}MB`
             console.log(result)
 
@@ -163,8 +171,58 @@
             saveAs(blob, "exportDirList.txt")
         },
         writeToExcel: function(result) {
-            // TODO: 导出excel
+            let wsContent = this.processExcelData()
+            this.doExcel(wsContent)
         },
+        processExcelData: function() {
+            // 数据
+            let ws_data = []
+            let maxLevelCount = 0
+            for (let i = 0; i < this.content.length; i++) {
+                let fileObj = this.content[i]
+                
+                let fileArr = [fileObj.name, fileObj.size, this.timestampToDatetime(fileObj.localMtime), this.timestampToDatetime(fileObj.serverMtime), fileObj.path]
+                let pathLevelArr = this.getPathLevelArr(fileObj.path);
+                let concat = fileArr.concat(pathLevelArr);
+                ws_data.push(concat)
+
+                maxLevelCount = Math.max(maxLevelCount, pathLevelArr.length)
+            }
+
+            // 表头
+            let wd_header = ['文件名', '大小(mb)', '修改时间' ,'云端时间', '完整路径']
+            for (let i = 0; i < maxLevelCount; i++) {
+                wd_header.push(`${i + 1}级`)
+            }
+
+            // sheet
+            let wsContent = []
+            wsContent.push(wd_header)
+            wsContent = wsContent.concat(ws_data)
+            
+            return wsContent
+        },
+        timestampToDatetime: function(timestamp) {
+            let date = new Date(timestamp * 1000);
+            // 使用toLocaleString方法格式化日期和时间
+            let datetime = date.toLocaleString('zh-CN', { hour12: false });
+            return datetime;
+        },
+        getPathLevelArr: function(path) {
+            let pathLevel = []
+            let pathSplit = path.split('/');
+            for (let i = 1; i < pathSplit.length - 1; i++) {
+                pathLevel.push(pathSplit[i])
+            }
+            
+            return pathLevel
+        },
+        doExcel(wsContent) {
+            let wb = XLSX.utils.book_new();
+            let ws = XLSX.utils.aoa_to_sheet(wsContent);
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+            XLSX.writeFile(wb, 'exportDirList.xlsx');
+        }
     }
     
     let authInfo = {
