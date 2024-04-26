@@ -68,7 +68,7 @@
             let selectedList = $("tr[class='im-pan-table__body-row mouse-choose-item selected']")
             for (let i = 0; i < selectedList.length; i++) {
                 let selected = selectedList[i];
-                let fsId = selected.dataset.id
+                let fsId = selected.dataset.id.substring(16,31)
                 this.loopQueryPage(fsId, 1)
             }
         },
